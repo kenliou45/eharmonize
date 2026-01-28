@@ -7,6 +7,7 @@ Please see wiki for additional details and information.
 
 Current version (Release v0.0.0): [![DOI](https://zenodo.org/badge/622720163.svg)](https://doi.org/10.5281/zenodo.15116824)
 
+Contact Kenny Liou (Kenny.Liou@loni.usc.edu) with questions regarding harmonize-dti implementation.
 ## Installation 
 
 As this package has not been added to PyPI, please follow the instructions below carefully.
@@ -85,7 +86,7 @@ Example usage:
 
 ### harmonize-dti 
 
-The **harmonize-dti** subcommand takes in a specified DTI metric spreadsheet from the ENIGMA-DTI pipeline and exports values harmonized to the respective reference curves included. This command follows the requirements of the harmonize-fa subcommand. Implemented by Kenny Liou (Kenny.Liou@loni.usc.edu)
+The **harmonize-dti** subcommand takes in a specified DTI metric spreadsheet from the ENIGMA-DTI pipeline and exports values harmonized to the respective reference curves included. This command follows the requirements of the harmonize-fa subcommand.
 
 Required Inputs:
 * `--incsv CSV`             File path of the CSV with the necessary covariates
