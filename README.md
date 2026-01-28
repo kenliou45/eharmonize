@@ -60,6 +60,7 @@ Optional Inputs:
 Example usage:
  
 `eharmonize harmonize-fa --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to`
+
 `eharmonize harmonize-fa --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --reference v0.0 --rerun`
 
 ### apply-harmonization
@@ -79,6 +80,7 @@ Optional Inputs:
 Example usage:
  
 `eharmonize apply-harmonization --incsv enigma_FA_new_spreadsheet.csv --model --log --outdir`
+
 `eharmonize apply-harmonization --incsv enigma_FA_new_spreadsheet.csv --model --log --outdir --metric FA`
 
 ### harmonize-dti 
@@ -100,8 +102,8 @@ Optional Inputs:
 Example usage:
  
 `eharmonize harmonize-dti --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --metric AD`
-`eharmonize harmonize-dti --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --reference v0.0 --rerun --metric MD`
 
+`eharmonize harmonize-dti --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --reference v0.0 --rerun --metric MD`
 
 ## Acknowledgments 
 
