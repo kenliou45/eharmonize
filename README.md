@@ -60,6 +60,7 @@ Optional Inputs:
 Example usage:
  
 `eharmonize harmonize-fa --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to`
+
 `eharmonize harmonize-fa --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --reference v0.0 --rerun`
 
 ### apply-harmonization
@@ -79,11 +80,30 @@ Optional Inputs:
 Example usage:
  
 `eharmonize apply-harmonization --incsv enigma_FA_new_spreadsheet.csv --model --log --outdir`
+
 `eharmonize apply-harmonization --incsv enigma_FA_new_spreadsheet.csv --model --log --outdir --metric FA`
 
-### harmonize-dti
+### harmonize-dti 
 
-In Development
+The **harmonize-dti** subcommand takes in a specified DTI metric spreadsheet from the ENIGMA-DTI pipeline and exports values harmonized to the respective reference curves included. This command follows the requirements of the harmonize-fa subcommand. Implemented by Kenny Liou (Kenny.Liou@loni.usc.edu)
+
+Required Inputs:
+* `--incsv CSV`             File path of the CSV with the necessary covariates
+                            and FA measures 
+* `--outdir DIR`            Directory to write out outputs to
+
+Optional Inputs:
+* `--reference version`    Version number of desired reference 
+                           [default: v0.1] 
+* `--rerun`                If used, will overwrite previous outputs
+
+* `--metric`               The DTI metric to be harmonized [default: FA]. Options: [FA, AD, MD, RD]
+
+Example usage:
+ 
+`eharmonize harmonize-dti --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --metric AD`
+
+`eharmonize harmonize-dti --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --reference v0.0 --rerun --metric MD`
 
 ## Acknowledgments 
 

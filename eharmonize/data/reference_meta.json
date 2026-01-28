@@ -5,7 +5,19 @@
             "user": "azhu",
             "filepath": "FA_reference.csv",
             "age_min": 3,
-            "age_max": 80
+            "age_max": 85,
+            "datasets": {
+                "PING": 900,
+                "HCP-D": 600,
+                "ABCD": 5600,
+                "SLIM": 400,
+                "HCP": 350,
+                "Cam-CAN": 300,
+                "PPMI": 80,
+                "UK Biobank": 32000,
+                "OASIS3": 200,
+                "ADNI3": 350
+            }
         }
     },
     
@@ -15,7 +27,76 @@
             "user": "azhu",
             "filepath": "FA_subsample_reference.csv",
             "age_min": 3,
-            "age_max": 80
+            "age_max": 85,
+            "datasets": {
+                "PING": 900,
+                "HCP-D": 600,
+                "ABCD": 5600,
+                "SLIM": 400,
+                "HCP": 350,
+                "Cam-CAN": 300,
+                "PPMI": 80,
+                "UK Biobank": 32000,
+                "OASIS3": 200,
+                "ADNI3": 350
+            }
+        },
+        "MD": {
+            "created": "April 13, 2023",
+            "user": "azhu",
+            "filepath": "MD_subsample_reference.csv",
+            "age_min": 3,
+            "age_max": 85,
+            "datasets": {
+                "PING": 900,
+                "HCP-D": 600,
+                "ABCD": 5600,
+                "SLIM": 400,
+                "HCP": 350,
+                "Cam-CAN": 300,
+                "PPMI": 80,
+                "UK Biobank": 32000,
+                "OASIS3": 200,
+                "ADNI3": 350
+            }
+        },
+        "AD": {
+            "created": "April 13, 2023",
+            "user": "azhu",
+            "filepath": "AD_subsample_reference.csv",
+            "age_min": 3,
+            "age_max": 85,
+            "datasets": {
+                "PING": 900,
+                "HCP-D": 600,
+                "ABCD": 5600,
+                "SLIM": 400,
+                "HCP": 350,
+                "Cam-CAN": 300,
+                "PPMI": 80,
+                "UK Biobank": 32000,
+                "OASIS3": 200,
+                "ADNI3": 350
+            }
+        },
+        "RD": {
+            "created": "April 13, 2023",
+            "user": "azhu",
+            "filepath": "RD_subsample_reference.csv",
+            "age_min": 3,
+            "age_max": 85,
+            "datasets": {
+                "PING": 900,
+                "HCP-D": 600,
+                "ABCD": 5600,
+                "SLIM": 400,
+                "HCP": 350,
+                "Cam-CAN": 300,
+                "PPMI": 80,
+                "UK Biobank": 32000,
+                "OASIS3": 200,
+                "ADNI3": 350
+            }
         }
     }
 }

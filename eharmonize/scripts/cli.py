@@ -326,5 +326,184 @@ def apply_harmonization(incsv, model, outdir, log, metric):
 # @click.option()
 # def harmonize_all(indir, outdir):
 
+
+
+
+
+
+
+@eharmonize.command()
+@click.option("--incsv", metavar="CSV", help="File path of the CSV file with the necessary covariates and DTI measures. The DTI measures in the CSV should match up with the DTI measure specified in the --measure input.")
+@click.option("--outdir", metavar="DIR", help="Directory to write out outputs to")
+# @click.option("--site", default="SITE", metavar="column", help="(optional) Column name to indicate site/study/protocol to harmonize by"
+@click.option("--reference", show_default=True, default='v0.1', metavar="version", help="(optional) Version number of desired reference")
+@click.option("--metric", show_default=True, default='FA', type=click.Choice(["FA", "AD", "MD", "RD"]), metavar="METRIC", help="(optional) DTI measure to harmonize. The default is FA. Options: FA, AD, MD, RD")
+@click.option("--rerun", is_flag=True, help="(optional) if used, will overwrite previous outputs")
+def harmonize_dti(incsv, outdir, reference, metric, rerun):
+    
+    # Settings Check
+
+    if not os.path.exists(incsv):
+        raise OSError("--incsv input does not exist:\n%s" %incsv)
+
+    if os.path.exists(os.path.join(outdir, f"harmonized_{metric}_{reference}.model")):
+        if rerun:
+            os.remove(os.path.join(outdir, f"harmonized_{metric}_{reference}.model"))
+        else:
+            raise ValueError("Model file already exists. Please use --rerun flag if you mean to overwrite")
+
+    if not os.path.isdir(outdir):
+        os.makedirs(outdir)
+
+    # now = datetime.now()
+    # dt_string = now.strftime("%B %d, %Y %H:%M:%S")
+    global txtlog
+    txtlog = efu.logstr()
+    log = txtlog.run_settings
+    log["reference"] = reference
+
+    dfI = pd.read_csv(incsv)
+    covars = ["Age", "Sex", "SITE"]
+    if "SITE" not in dfI.columns:
+        dfI.loc[:, "SITE"] = "enigma"
+        site_msg = "\nNo 'SITE' column provided, so we're going to assume that all data comes from the same site.\n"
+        txtlog.stdO_file(site_msg)
+
+    if "DX" in dfI.columns:
+        dfI.rename(columns={"DX": "Dx"}, inplace=True)
+    if "Dx" in dfI.columns:
+        dfI.loc[dfI.Dx.notnull(), "Dx"] = dfI.loc[dfI.Dx.notnull(), "Dx"].str.strip().str.lower()
+    cohort_info = efu.input_check(dfI, covars[:-1])
+    log.update(cohort_info)
+
+    log[metric] = {}
+    pkg_settings, dfR = efu.load_version(reference, metric)
+    roi_columns = dfR.columns[3:] 
+    dfF, roi_dict, outM = efu.column_match(dfI, roi_columns, metric)
+    txtlog.stdO_file(outM)
+    txtlog.stdO_file("\nUsing ROIS:\n%s\n" % ", ".join(roi_dict.keys()))
+    log[metric]["ROIs"] = list(roi_dict.keys())
+
+    # Subject Check
+
+    age_excludes, outM = efu.age_check(dfF, pkg_settings, metric)
+    txtlog.stdO_file(outM)
+    dfF = dfF.loc[~age_excludes]
+
+    # Preprocessing 
+
+    if "Dx" in dfF.columns:
+        controlDF = dfF.loc[dfF.Dx== "control"]
+        if controlDF.empty:
+            txtlog.stdO_file("\nWe appear to have detected a case only input.\nWe're not set up at the moment, so if that's the case, sorry.\nIf not, please check inputs and try again.\n")
+            txtlog.to_file(os.path.join(outdir, f"harmonized_{metric}_{reference}.txt"))
+            sys.exit(1)
+        caseDF = dfF.loc[dfF.Dx != "control"]
+        if caseDF.empty:
+            caseDF = None
+    else:
+        controlDF = dfF.copy()
+        caseDF = None
+
+    # Processing
+
+    from neuroHarmonize import harmonizationLearn, saveHarmonizationModel, harmonizationApply
+
+    # TODO: add possible imputation and threshold for which ROIs to keep/drop
+
+    rois2use = [c for c in roi_columns if c in controlDF.columns]
+    missing_in_action = [c for c in roi_columns if c not in controlDF.columns]
+    if len(missing_in_action) > 0:
+        txtlog.stdO_file("\nOnly harmonizing subset of ROIs (%i) found in reference\n" % (len(roi_columns) - len(rois2use)))
+        log[metric]["missing_ROIs"] = missing_in_action
+
+    Ncontrols = controlDF.shape[0]
+    controlDFfilt = controlDF.dropna(subset=rois2use+covars)
+    if controlDFfilt.shape[0] < Ncontrols:
+        txtlog.stdO_file("\nDropping %i controls due to NA values\n" %(Ncontrols - controlDFfilt.shape[0]))
+    
+    dfRef = dfR[["Age", "Sex"] + rois2use]
+    if "reference" in controlDFfilt.SITE.unique():
+        raise ValueError("Cannot have a SITE named 'reference'")
+    else:
+        dfRef.loc[:, "SITE"] = "reference"
+
+    dfComb = pd.concat([controlDFfilt[["subjectID"]+covars+rois2use], dfRef[covars+rois2use]], ignore_index=True)
+    
+    CoRarray = np.array(dfComb[rois2use])
+    CoRcovars = dfComb[covars]
+
+    run_msg_1='''
+    
+    ###################################
+    Applying ComBat-GAM to Controls now
+    ###################################
+
+    '''
+
+    txtlog.stdO_file(run_msg_1)
+    gam_model, control_data_adj = harmonizationLearn(CoRarray, CoRcovars, smooth_terms=['Age'], ref_batch="reference")
+    gam_adj_DF = pd.concat([
+        dfComb[["subjectID"]].reset_index(drop=True),
+        CoRcovars.reset_index(drop=True),
+        pd.DataFrame(control_data_adj, columns=rois2use)],
+        axis=1)
+    gam_adj_DF = gam_adj_DF.loc[gam_adj_DF.SITE != "reference"]
+
+    if caseDF is not None:
+        print(caseDF.shape)
+        Ncases = caseDF.shape[0]
+        caseDFfilt = caseDF.dropna(subset=rois2use+covars)
+        if caseDFfilt.shape[0] < Ncases:
+            txtlog.stdO_file("\nDropping %i cases due to NA values\n" %(Ncases - caseDFfilt.shape[0]))
+    
+        # CaComb = caseDFfilt[["subjectID"]+covars+rois2use]
+        CaComb = pd.concat([caseDFfilt[["subjectID"]+covars+rois2use], dfRef[covars+rois2use]], ignore_index=True)
+        CaRarray = np.array(CaComb[rois2use])
+        CaRcovars = CaComb[covars]
+        run_msg_2='''
+        
+        ###################################
+        Applying ComBat-GAM to Cases now
+        ###################################
+
+        '''
+
+        txtlog.stdO_file(run_msg_2)
+        case_data_adj = harmonizationApply(CaRarray, CaRcovars, gam_model)
+
+        case_adj_DF = pd.concat([
+            caseDFfilt[["subjectID"]].reset_index(drop=True),
+            CaRcovars.reset_index(drop=True),
+            pd.DataFrame(case_data_adj, columns=rois2use)],
+            axis=1)
+        case_adj_DF = case_adj_DF.loc[case_adj_DF.SITE != "reference"]
+        gam_adj_DF = pd.concat([gam_adj_DF, case_adj_DF], ignore_index=True)
+
+    dfO = dfI.set_index("subjectID")
+    adj_df = gam_adj_DF.set_index("subjectID")
+    dfO = dfO.loc[dfO.index.isin(adj_df.index)]
+    for k, v in roi_dict.items():
+        adj_df.rename(columns={v: k}, inplace=True)
+        dfO[k] = adj_df[k]
+
+    # Wrapping Up
+
+    dfO.to_csv(os.path.join(outdir, f"harmonized_{metric}_{reference}.csv"), index_label="subjectID")
+    saveHarmonizationModel(gam_model, os.path.join(outdir, f"harmonized_{metric}_{reference}.model"))
+    with open(os.path.join(outdir, f"harmonized_{metric}_{reference}.json"), 'w') as f:
+        json.dump(log, f)
+
+    qcdir = os.path.join(outdir, "QC_images")
+    if not os.path.exists(qcdir):
+        os.makedirs(qcdir)
+    txtlog.stdO_file("\nMaking QC Images now\n")
+    efu.qc_images(rois2use, dfR, dfF, gam_adj_DF, qcdir)
+    txtlog.stdO_file("\n\nSuccessful Completion!\n")
+    txtlog.to_file(os.path.join(outdir, f"harmonized_{metric}_{reference}.txt"))
+
+    return
+
+
 if __name__ == "__main__":
     eharmonize()

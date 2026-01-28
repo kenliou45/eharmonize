@@ -46,7 +46,7 @@ def input_check(dfI, covars):
 
     cohort_info = {}
     sex_values = dfI.Sex.fillna("NA").value_counts()
-    for k, v in sex_values.iteritems():
+    for k, v in sex_values.items():
         if k == 0:
             cohort_info["N_Females"] = v
         elif k == 1:
@@ -55,12 +55,12 @@ def input_check(dfI, covars):
             cohort_info["N_Sex_%s" % k] = v
     
     site_values = dfI.SITE.fillna("NA").value_counts()
-    for k, v in site_values.iteritems():
+    for k, v in site_values.items():
         cohort_info["N_SITE_%s" %k] = v
 
     if "Dx" in dfI.columns:
         control_values = dfI.Dx.fillna("NA").value_counts()
-        for k,v in control_values.iteritems():
+        for k,v in control_values.items():
             if k == "case":
                 cohort_info["N_cases"] = v
             elif k == "control":
@@ -81,14 +81,14 @@ def load_version(reference, metric):
 
     return pkg_settings, dfR
 
-def age_check(dfI, pkg_settings):
+def age_check(dfI, pkg_settings, metric="FA"):
     outMessage = "\nChecking age range of input data\n"
-    age_min = pkg_settings["FA"]["age_min"]
+    age_min = pkg_settings[metric]["age_min"]
     too_young = dfI.Age < age_min
     if too_young.sum() > 0:
         outMessage += "\nFound %i subjects younger than %i years old. Excluding them.\n" %(too_young.sum(), age_min)
 
-    age_max = pkg_settings["FA"]["age_max"]
+    age_max = pkg_settings[metric]["age_max"]
     too_old = dfI.Age > age_max
     if too_old.sum() > 0:
         outMessage += "\nFound %i subjects older than %i years old. Excluding them.\n" %(too_old.sum(), age_max)
@@ -154,30 +154,42 @@ def qc_images(rois2use, dfR, dfI, dfO, qcdir):
 
     matplotlib.rc('font', **font)
 
+    linestyles = ['solid', 'dotted', 'dashed', 'dashdot']  
+
     age_min = dfI.Age.min()
     age_max = dfI.Age.max()
     dfR_filt = dfR.loc[(dfR.Age < age_max) & (dfR.Age > age_min)]
-    dfI.loc[:, "Data"] = "Raw"
-    dfO.loc[:, "Data"] = "Harmonized"
+    if ("Dx" in dfI.columns) and ("Dx" in dfO.columns):
+        dfI.loc[dfI.Dx == "control", "Data"] = "Raw - Control"
+        dfI.loc[dfI.Dx == "case", "Data"] = "Raw - Case"
+        dfO.loc[dfO.Dx == "control", "Data"] = "Harmonized - Control"
+        dfO.loc[dfO.Dx == "case", "Data"] = "Harmonized - Case"
+    else:
+        dfI.loc[:, "Data"] = "Raw"
+        dfO.loc[:, "Data"] = "Harmonized"
     plot_data = pd.concat([dfI, dfO], ignore_index=True)
     plot_data.dropna(subset=["Age"], inplace=True)
     plot_data.loc[:, "Age_int"] = plot_data["Age"].astype(int)
 
-    # TODO: add case/control distinction
-    # TODO: add ENIGMA LUT so full ROI names can be spelled out
-    # lutfile = pkg_resources.resource_filename(__name__, '../data/ENIGMA_LUT.txt')
-    # lut = pd.read_csv(lutfile, delimiter="\t")
+    lutfile = pkg_resources.resource_filename(__name__, '../data/ENIGMA_LUT.txt')
+    lut = pd.read_csv(lutfile, delimiter="\t", index_col="Abbreviation")
 
     for roi in rois2use:
+        # ax0 = sns.lmplot(plot_data, x="Age", y=roi, seed=0,
+        #         row="SITE", hue="Data", lowess=True,
+        #         line_kws={"ls": linestyles[:len(plot_data.Data.unique())]}, 
+        #         scatter=True, scatter_kws={"s": 5, "alpha": 0.5},
+        #         height=5, aspect=2)
+        # ax = ax0.axes[0,0]
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        # TODO: switch to regplot with lowess=True
-        # and add scatterplot
         sns.lineplot(data=dfR, x="Age", y=roi,
                 alpha = 0.5, ax=ax, color="black")
+        sns.scatterplot(plot_data, x="Age", y=roi, 
+                hue="SITE",style="Data", alpha=0.5, ax=ax)
         sns.lineplot(data=plot_data, x="Age_int", y = roi,
                 hue="SITE", style="Data", ax=ax)
-        # sns.scatterplot(plot_data, x="Age", y=roi, 
-        #         hue="SITE",style="Data", alpha=0.5, ax=ax)
+
+        # To have lines and histograms 
         # fig, ax = plt.subplots(1, 2 figsize=(10, 5))    
         # ax[0].plot(dfR_filt.Age, dfR_filt[roi],
         #         'k.', alpha = 0.5)
@@ -185,9 +197,18 @@ def qc_images(rois2use, dfR, dfI, dfO, qcdir):
         # ax[1].hist(dfR_filt[roi], bins=50, alpha=0.5)
         # sns.histplot(plot_data, x=roi, bins=10, hue="SITE",
         #         ax=ax[1])
+
         ax.set_title("ROI vs Age (years)")
         ax.set_xlabel("Age (years)")
-        ax.legend(bbox_to_anchor=(1.1, 1.05))
+        # TODO: this is specific to ENIGMA DTI
+        # will break for other modalities (e.g., FreeSurfer)
+        roi_key = roi.split("_")[0]
+        if roi_key in lut.index:
+            ax.set_ylabel(lut.loc[roi_key, "FullName"])
+        else:
+            ax.set_ylabel(roi)
+        ax.legend(ncol=2, bbox_to_anchor=(1.1, 1.05))
         plt.tight_layout()
         plt.savefig(os.path.join(qcdir, "%s.png" %roi))
     return
+
