@@ -99,8 +99,8 @@ Optional Inputs:
 
 Example usage:
  
-`eharmonize harmonize-dti --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --metric 'AD'`
-`eharmonize harmonize-dti --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --reference v0.0 --rerun --metric 'MD'`
+`eharmonize harmonize-dti --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --metric AD`
+`eharmonize harmonize-dti --incsv enigma_FA_spreadsheet.csv --outdir /path/to/write/to --reference v0.0 --rerun --metric MD`
 
 
 ## Acknowledgments 
